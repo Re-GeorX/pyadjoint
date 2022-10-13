@@ -60,7 +60,10 @@ class FunctionAssignBlock(Block):
                 diff_expr = ufl.algorithms.expand_derivatives(
                     ufl.derivative(expr, block_variable.saved_output, adj_input_func)
                 )
-                adj_output.assign(diff_expr)
+                if self.backend.__name__ == "firedrake":
+                    adj_output.interpolate(diff_expr)
+                else:
+                    adj_output.assign(diff_expr)
             else:
                 # Assume current variable is scalar constant.
                 # This assumption might be wrong for firedrake.
@@ -69,7 +72,10 @@ class FunctionAssignBlock(Block):
                 diff_expr = ufl.algorithms.expand_derivatives(
                     ufl.derivative(expr, block_variable.saved_output, self.backend.Constant(1.))
                 )
-                adj_output.assign(diff_expr)
+                if self.backend.__name__ == "firedrake":
+                    adj_output.interpolate(diff_expr)
+                else:
+                    adj_output.assign(diff_expr)
                 return adj_output.vector().inner(adj_input_func.vector())
 
             if isinstance(block_variable.output, self.backend.Constant):
@@ -109,9 +115,12 @@ class FunctionAssignBlock(Block):
         dudmi = self.backend.Function(block_variable.output.function_space())
         for dep in self.get_dependencies():
             if dep.tlm_value:
-                dudmi.assign(ufl.algorithms.expand_derivatives(
-                    ufl.derivative(expr, dep.saved_output,
-                                   dep.tlm_value)))
+                diff_expr = ufl.algorithms.expand_derivatives(
+                    ufl.derivative(expr, dep.saved_output, dep.tlm_value))
+                if self.backend.__name__ == "firedrake":
+                    dudmi.interpolate(diff_expr)
+                else:
+                    dudmi.assign(diff_expr)
                 dudm.vector().axpy(1.0, dudmi.vector())
 
         return dudm
@@ -138,7 +147,7 @@ class FunctionAssignBlock(Block):
         if self.expr is None:
             prepared = inputs[0]
         output = self.backend.Function(block_variable.output.function_space())
-        self.backend.Function.assign(output, prepared)
+        output.assign(prepared)
         return output
 
     def __str__(self):
