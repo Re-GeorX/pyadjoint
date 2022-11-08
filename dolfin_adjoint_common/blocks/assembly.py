@@ -36,7 +36,7 @@ class AssembleBlock(Block):
             return adj_input * dform_vector, dform
         elif arity_form == 1:
             if dform is None:
-                dc = self.backend.TrialFunction(space)
+                dc = self.backend.TestFunction(space) 
                 dform = self.backend.derivative(form, c_rep, dc)
             # Get the Function
             adj_input = adj_input.function
@@ -46,8 +46,8 @@ class AssembleBlock(Block):
             # -> Workaround: Apply action/adjoint numerically (using PETSc).
             if not isinstance(c_rep, self.backend.SpatialCoordinate):
                 # Symbolically compute: (dform/dc_rep)^* * adj_input
-                adj_output = self.backend.action(self.backend.adjoint(dform), adj_input)
-                adj_output = self.compat.assemble_adjoint_value(adj_output)
+                output = self.compat.assemble_adjoint_value(dform) 
+                adj_output = adj_input * output
             else:
                 # Get PETSc matrix
                 dform_mat = self.compat.assemble_adjoint_value(dform).petscmat
